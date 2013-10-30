@@ -1,7 +1,13 @@
 import serial
 
+MSA438 = 0
+MSA458 = 1
+MSA438E = 2
+
+
 class MicronixSMA400(object):
 	port = "COM1"
+	devModel = MSA438
 	__serialPort = None
 	def __init__(self, port="COM1", autoOpen= True):
 		assert(port!="")
@@ -117,3 +123,30 @@ class MicronixSMA400(object):
 		assert( value in ('TOTAL', 'BAND') )
 		self.sendCommand('CPMODE'+value)
 		
+	@property
+	def cpcntr(self):
+		return self.sendCommand('CPCNTR?')
+	
+	@cpcntr.setter
+	def cpcntr(self,value):
+		value = str(value)
+		self.sendCommand( 'CPCNTR' + value )
+		
+	@property
+	def cpwidth(self):
+		return self.sendCommand( 'CPWIDTH?' )
+		
+	@cpwidth.setter
+	def cpwidth(self,value):
+		self.sendCommand('CPWIDTH' + str(value))
+		
+	@property
+	def acpmode(self):
+		return self.sendCommand('ACPMODE?')
+		
+	@acpmode.setter
+	def acpmode(self, value)
+		value = str(value).upper()
+		assert( value in ('TOTAL', 'BAND', 'PEAK') )
+		self.sendCommand( 'ACPMODE'+value )
+	
