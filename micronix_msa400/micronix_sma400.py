@@ -106,3 +106,14 @@ class MicronixSMA400(object):
 		assert( value in ( 'CP', 'ACP', 'OBW', 'EF', 'MF', 'FC', 'OFF' ) )
 		self.sendCommand('MEASOFF')
 		self.sendCommand('MEAS'+value)
+		
+	@property
+	def cpmode(self):
+		return self.sendCommand('CPMODE?')
+	
+	@cpmode.setter
+	def cpmode(self, value):
+		value = str(value)
+		assert( value in ('TOTAL', 'BAND') )
+		self.sendCommand('CPMODE'+value)
+		
