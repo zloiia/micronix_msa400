@@ -239,3 +239,48 @@ class MicronixSMA400(object):
 		value = str(value).upper().strip()
 		assert( value in ('INT','EXT') )
 		self.sendCommand('TRG'+value)
+		
+	def mkrres(self):
+		return self.sendCommand('MKRRES')
+
+	@property
+	def mkr(self):
+		return self.sendCommand('MKR?')
+
+	@mkr.setter
+	def mkr(self, value):
+		value = str(value).upper().strip()
+		assert( value in ('NORM','DELTA') )
+		self.sendCommand('MKR'+value)
+
+	@property
+	def normkr(self):
+		return self.sendCommand( 'NORMMKR?' )
+
+	@normkr.setter
+	def normmkr(self, value):
+		assert( int(value)>=0 and int(value)<=500 )
+		self.sendCommand( 'NORMKR' + str(value) )
+
+	@property
+	def peak(self):
+		return self.sendCommand('PEAK?')
+
+	@peak.setter
+	def peak(self, value):
+		value = str(value).upper().strip()
+		assert( value in ( 'NORM', 'PEAK' ) )
+		self.sendCommand( 'PEAK'+value )
+
+	@property
+	def pksearch(self):
+		return self.sendCommand('PKSEARCH?')
+
+	@pksearch.setter
+	def pksearch(self, value):
+		assert( value in ( '01' , '02' , '03' , '04' , '05' , '06' , '07' , '08' , '09', '10' , '11') )
+		self.sendCommand( "PKSEARCH" + str(value) )
+
+
+	def srsf(self):
+		data = self.sendCommand( 'SRSF' )
