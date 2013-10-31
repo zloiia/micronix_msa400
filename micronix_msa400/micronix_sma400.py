@@ -1,4 +1,5 @@
 import serial
+import time
 
 MSA438 = 0
 MSA458 = 1
@@ -37,12 +38,22 @@ class MicronixSMA400(object):
 		self.__serialPort.open()
 		self.sendCommand('REFDBM')
 
-	def sendCommand(self,command):
+	def sendCommand(self,command, endTurple = True, sleepTime = 3):
 		assert( self.__serialPort!=None )
 		self.__serialPort.write(command + '\x0D\x0A')
 		result = ""
-		while result.find('\x0A')==-1:
-			result += self.__serialPort.read( self.__serialPort.inWaiting() )
+		if endTurple:
+			while result.find('\x0D\x0A')==-1:
+				result += self.__serialPort.read( self.__serialPort.inWaiting() )
+		else:
+			last = time.time()
+			rd = 0
+			while ( time.time()-last )<2:
+				rd = self.__serialPort.inWaiting()
+				if rd>0:
+					last = time.time()
+					result += self.__serialPort.read( rd )
+					self.__serialPort.flush()
 		return result.strip()
 
 	def hold(self):
@@ -55,7 +66,7 @@ class MicronixSMA400(object):
 		return self.sendCommand('FREQSETMK')
 
 	def measres(self):
-		return self.sendCommand('MEASRES')
+		return self.sendCommand('MEASRES',False,10)
 		
 	def autotune(self):
 		return self.sendCommand('AUTO')
@@ -148,7 +159,7 @@ class MicronixSMA400(object):
 		return self.sendCommand('ACPMODE?')
 		
 	@acpmode.setter
-	def acpmode(self, value)
+	def acpmode(self, value):
 		value = str(value).upper()
 		assert( value in ('TOTAL', 'BAND', 'PEAK') )
 		self.sendCommand( 'ACPMODE'+value )
@@ -231,7 +242,7 @@ class MicronixSMA400(object):
 		
 	
 	@property
-	def tgr(self):
+	def trg(self):
 		return self.sendCommand('TRG?')
 		
 	@trg.setter
@@ -283,4 +294,5 @@ class MicronixSMA400(object):
 
 
 	def srsf(self):
-		data = self.sendCommand( 'SRSF' )
+		data = self.sendCommand( 'SRSF' , False)
+		return data
