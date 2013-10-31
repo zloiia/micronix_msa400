@@ -56,6 +56,9 @@ class MicronixSMA400(object):
 
 	def measres(self):
 		return self.sendCommand('MEASRES')
+		
+	def autotune(self):
+		return self.sendCommand('AUTO')
 
 	@property
 	def freq(self):
@@ -149,4 +152,90 @@ class MicronixSMA400(object):
 		value = str(value).upper()
 		assert( value in ('TOTAL', 'BAND', 'PEAK') )
 		self.sendCommand( 'ACPMODE'+value )
+		
+	@property
+	def calc(self):
+		return self.sendCommand('CALC?')
+	@calc.setter
+	def calc(self, value):
+		value = str(value).upper()
+		assert( value in ( 'OFF','MAX','MIN','AVE','OVR' ) )
+		self.sendCommand('CALC'+value)
+		
+	@property
+	def maxno(self):
+		return self.sendCommand('MAXNO?')
+		
+	@maxno.setter
+	def maxno(self, value):
+		assert( int(value) in ( 2,4,8,16,32,64,128,256,512,1024,0 ) )
+		self.sendCommand( 'MAXNO'+str(value) )
+		
+	@property
+	def minno(self):
+		return self.sendCommand( 'MINNO?' )
+		
+	@minno.setter
+	def minno(self, value):
+		assert( int(value) in ( 2,4,8,16,32,64,128,256,512,1024,0 ) )
+		self.sendCommand( 'MINNO'+str(value) )
+		
+	@property
+	def aveno(self):
+		return self.sendCommand( 'AVENO?' )
+		
+	@aveno.setter
+	def aveno(self, value):
+		assert( int(value) in ( 2,4,8,16,32,64,128,256,512,1024,0 ) )
+		self.sendCommand( 'AVENO'+str(value) )
+		
+	@property
+	def ovrno(self):
+		return self.sendCommand('OVRNO?')
+		
+	@ovrno.setter
+	def ovrno(self,value):
+		assert( int(value) in ( 2,4,8,16,32,64,128,256,512,1024,0 ) )
+		self.sendCommand( 'OVRNO'+str(value) )
+		
+	@property
+	def scale(self):
+		return self.sendCommand('SCALE?')
+		
+	@scale.setter
+	def scale(self,value):
+		assert( int(value) in (2,5,10) )
+		self.sendCommand( 'SCALE'+ str(value) )
+		
+	@property
+	def sweep(self):
+		return self.sendCommand('SWEEP?')
+		
+	@sweep.setter
+	def sweep(self,value):
+		value = str(value).upper()
+		value = value.replace('.',',')
+		assert( str(value) in ( '10M' , '30M' , '0,1S' , '0,3S' , '1S' , '3S' , '10S' , '30S' , 'AUTO' , 'ALL' ) )
+		self.sendCommand( 'SWEEP'+value )
+		
+		
+	@property
+	def det(self):
+		return self.sendCommand('DET?')
+		
+	@det.setter
+	def det(self, value):
+		value = str(value).upper().strip()
+		assert( value in ('POS' , 'NEG' , 'SMP') )
+		self.sendCommand( 'DET'+value )
+		
 	
+	@property
+	def tgr(self):
+		return self.sendCommand('TRG?')
+		
+	@trg.setter
+	def trg(self, value):
+		value = str(value).upper().strip()
+		assert( value in ('INT','EXT') )
+		self.sendCommand('TRG'+value)
