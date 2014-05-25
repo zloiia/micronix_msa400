@@ -1,12 +1,14 @@
 import serial
 import time
+import re
 
 MSA438 = 0
 MSA458 = 1
 MSA438E = 2
 
 
-class MicronixSMA400(object):
+class MicronixMSA400(object):
+	"""Driver for MicronixMSA400"""
 	port = "COM1"
 	devModel = MSA438
 	__serialPort = None
@@ -17,11 +19,11 @@ class MicronixSMA400(object):
 			self.open()
 
 	def __del__(self):
-		if self.__serialPort!=None:
+		if self.__serialPort is not None:
 			self.__serialPort.close()
 
 	def open(self):
-		if self.__serialPort!=None:
+		if self.__serialPort is not None:
 			try:
 				self.__serialPort.close()
 			except:
@@ -38,8 +40,12 @@ class MicronixSMA400(object):
 		self.__serialPort.open()
 		self.sendCommand('REFDBM')
 
+	def close(self):
+		if self.__serialPort is not None:
+			self.__serialPort.close()
+
 	def sendCommand(self,command, endTurple = True, sleepTime = 3):
-		assert( self.__serialPort!=None )
+		assert( self.__serialPort is not None )
 		self.__serialPort.write(command + '\x0D\x0A')
 		result = ""
 		if endTurple:
@@ -85,6 +91,7 @@ class MicronixSMA400(object):
 
 	@span.setter
 	def span(self,value):
+		value = value.upper()
 		assert( value in ('ZERO', '200K', '500K', '1M', '2M', '5M', '20M', '50M', '100M', '200M', '500M', '1G', '2G', 'FULL') )
 		self.sendCommand('SPAN'+value)
 
@@ -103,6 +110,7 @@ class MicronixSMA400(object):
 
 	@rbw.setter
 	def rbw(self,value):
+		value = value.upper()
 		assert( value in ('3K', '10K', '30K', '100K', '1M', '3M', 'AUTO', 'ALL') )
 		self.sendCommand('RBW'+str(value))
 
@@ -293,6 +301,20 @@ class MicronixSMA400(object):
 		self.sendCommand( "PKSEARCH" + str(value) )
 
 
+	@staticmethod
+	def freq2HZ(data):
+		scale = re.findall('[MKG]',data)[0]
+		o = re.findall('[\d+\.]+',data)[0]
+		o =  float(o)
+		if scale=="G": return int(o * 1000000000)
+		else:
+			if scale=="M": return int(o * 1000000)
+			else:
+				if scale=='K': return int(o*1000) 
+
+
 	def srsf(self):
 		data = self.sendCommand( 'SRSF' , False)
-		return data
+		parts = re.findall('CF\s(\S+)\s+SP\s(\S+)\s+RF\s(\S+)\s+ST\s(\S+)\s(\S+)\s+RB\s(\S+)\s+VB\s(\S+)\s+SC\s(\S+)',data)
+		spects = re.findall('(-\d+\.\d+)',data)
+
