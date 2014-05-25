@@ -306,11 +306,11 @@ class MicronixMSA400(object):
 		scale = re.findall('[MKG]',data)[0]
 		o = re.findall('[\d+\.]+',data)[0]
 		o =  float(o)
-		if scale=="G": return int(o * 1000000000)
-		else:
-			if scale=="M": return int(o * 1000000)
-			else:
-				if scale=='K': return int(o*1000) 
+		return {
+			'G': int(o * 1000000000),
+			'M': return int(o * 1000000),
+			'K': return int(o*1000)
+		}.get(scale)
 
 
 	def srsf(self):
