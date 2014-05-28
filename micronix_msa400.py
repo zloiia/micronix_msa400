@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import serial
 import time
 
@@ -6,7 +7,7 @@ MSA458 = 1
 MSA438E = 2
 
 
-class MicronixSMA400(object):
+class MicronixMSA400(object):
 	port = "COM1"
 	devModel = MSA438
 	__serialPort = None
@@ -293,7 +294,11 @@ class MicronixSMA400(object):
 		self.sendCommand( "PKSEARCH" + str(value) )
 
 
-	def srsf(self):
+	def srsf(self, freqsinspect = True):
+		""" Возвращает спектр вместе с параметрами
+		freqsinspect	-	подставлять ли в спектр значения частоты или вывести только уровни
+		"""
+		assert(isinstance(freqsinspect, bool))
 		import re
 		def parseFreq(d):
 			p = re.findall('([\d\.]+)(G|M|K|Hz|kHz|MHz|GHz)',d)
@@ -319,6 +324,18 @@ class MicronixSMA400(object):
 			'RB': parseFreq(parts[5]), #Hz
 			'VB': parseFreq(parts[6]), #Hz
 			'SC': float(re.findall('([\d]+)',parts[7])[0]), #dB/d
-			'amps': [float(f) for f in spects]
+			#'amps': [float(f) for f in spects]
 		}
+		if freqsinspect:
+			leftBorder = int(res['CF']-(res['SP']/2))
+			rightBorder = int(res['CF'] + (res['SP']/2)+1)
+			step = int(res['SP']/1000)
+			sf = []
+			i = 0
+			for f in range(leftBorder,rightBorder,step):
+				sf.append((f,spects[i]))
+				i += 1
+			res['amps'] = sf
+		else:
+			res['amps'] = [float(f) for f in spects]
 		return res
