@@ -1,14 +1,12 @@
 import serial
 import time
-import re
 
 MSA438 = 0
 MSA458 = 1
 MSA438E = 2
 
 
-class MicronixMSA400(object):
-	"""Driver for MicronixMSA400"""
+class MicronixSMA400(object):
 	port = "COM1"
 	devModel = MSA438
 	__serialPort = None
@@ -19,11 +17,11 @@ class MicronixMSA400(object):
 			self.open()
 
 	def __del__(self):
-		if self.__serialPort is not None:
+		if self.__serialPort!=None:
 			self.__serialPort.close()
 
 	def open(self):
-		if self.__serialPort is not None:
+		if self.__serialPort!=None:
 			try:
 				self.__serialPort.close()
 			except:
@@ -40,12 +38,8 @@ class MicronixMSA400(object):
 		self.__serialPort.open()
 		self.sendCommand('REFDBM')
 
-	def close(self):
-		if self.__serialPort is not None:
-			self.__serialPort.close()
-
-	def sendCommand(self,command, endTurple = True, sleepTime = 3):
-		assert( self.__serialPort is not None )
+	def sendCommand(self,command, endTurple = True, sleepTime = 1):
+		assert( self.__serialPort!=None )
 		self.__serialPort.write(command + '\x0D\x0A')
 		result = ""
 		if endTurple:
@@ -54,7 +48,7 @@ class MicronixMSA400(object):
 		else:
 			last = time.time()
 			rd = 0
-			while ( time.time()-last )<2:
+			while ( time.time()-last )<sleepTime:
 				rd = self.__serialPort.inWaiting()
 				if rd>0:
 					last = time.time()
@@ -91,7 +85,6 @@ class MicronixMSA400(object):
 
 	@span.setter
 	def span(self,value):
-		value = value.upper()
 		assert( value in ('ZERO', '200K', '500K', '1M', '2M', '5M', '20M', '50M', '100M', '200M', '500M', '1G', '2G', 'FULL') )
 		self.sendCommand('SPAN'+value)
 
@@ -110,7 +103,6 @@ class MicronixMSA400(object):
 
 	@rbw.setter
 	def rbw(self,value):
-		value = value.upper()
 		assert( value in ('3K', '10K', '30K', '100K', '1M', '3M', 'AUTO', 'ALL') )
 		self.sendCommand('RBW'+str(value))
 
@@ -301,20 +293,32 @@ class MicronixMSA400(object):
 		self.sendCommand( "PKSEARCH" + str(value) )
 
 
-	@staticmethod
-	def freq2HZ(data):
-		scale = re.findall('[MKG]',data)[0]
-		o = re.findall('[\d+\.]+',data)[0]
-		o =  float(o)
-		return {
-			'G': int(o * 1000000000),
-			'M': return int(o * 1000000),
-			'K': return int(o*1000)
-		}.get(scale)
-
-
 	def srsf(self):
-		data = self.sendCommand( 'SRSF' , False)
+		import re
+		def parseFreq(d):
+			p = re.findall('([\d\.]+)(G|M|K|Hz|kHz|MHz|GHz)',d)
+			npart = float(p[0][0])
+			return npart * {
+				'Hz': 1,
+				'kHz': 1000,
+				'K': 1000,
+				'MHz': 1000*1000,
+				'M': 1000*1000,
+				'G': 1000*1000*1000,
+				'GHz': 1000000000
+			}.get(p[0][1])
+		data = self.sendCommand( 'SRSF' , False, sleepTime = 2)
 		parts = re.findall('CF\s(\S+)\s+SP\s(\S+)\s+RF\s(\S+)\s+ST\s(\S+)\s(\S+)\s+RB\s(\S+)\s+VB\s(\S+)\s+SC\s(\S+)',data)
+		parts = parts[0]
 		spects = re.findall('(-\d+\.\d+)',data)
-
+		res = {
+			'CF': parseFreq(parts[0]), #Hz
+			'SP': parseFreq(parts[1]), #Hz
+			'RF': float(re.findall('([-\d\.]+)',parts[2])[0]), #dBm
+			'ST': float(re.findall('([\d\.]+)',parts[3])[0]), #seconds
+			'RB': parseFreq(parts[5]), #Hz
+			'VB': parseFreq(parts[6]), #Hz
+			'SC': float(re.findall('([\d]+)',parts[7])[0]), #dB/d
+			'amps': [float(f) for f in spects]
+		}
+		return res
