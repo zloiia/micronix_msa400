@@ -1,11 +1,27 @@
 # -*- coding: utf-8 -*-
 import serial
 import time
+import re
+import json
 
 MSA438 = 0
 MSA458 = 1
 MSA438E = 2
 
+PRESET_FIELDS = ('freq','span', 'ref', 'rbw', 'vbw', 'meas', 'cpmode','meas','cpcntr','cpwidth','acpmode','calc','maxno','minno','aveno','ovrno','scale','sweep','det','trg','mkr','normkr','peak','pksearch')
+
+def parseFreq(d):
+	p = re.findall('([\d\.]+)(G|M|K|Hz|kHz|MHz|GHz)',d)
+	npart = int(float(p[0][0]))
+	return npart * {
+		'Hz': 1,
+		'kHz': 1000,
+		'K': 1000,
+		'MHz': 1000*1000,
+		'M': 1000*1000,
+		'G': 1000*1000*1000,
+		'GHz': 1000000000
+	}.get(p[0][1])
 
 class MicronixMSA400(object):
 	port = "COM1"
@@ -18,11 +34,11 @@ class MicronixMSA400(object):
 			self.open()
 
 	def __del__(self):
-		if self.__serialPort!=None:
+		if self.__serialPort is not None:
 			self.__serialPort.close()
 
 	def open(self):
-		if self.__serialPort!=None:
+		if self.__serialPort is not None:
 			try:
 				self.__serialPort.close()
 			except:
@@ -40,7 +56,7 @@ class MicronixMSA400(object):
 		self.sendCommand('REFDBM')
 
 	def sendCommand(self,command, endTurple = True, sleepTime = 1):
-		assert( self.__serialPort!=None )
+		assert( self.__serialPort is not None )
 		self.__serialPort.write(command + '\x0D\x0A')
 		result = ""
 		if endTurple:
@@ -67,10 +83,36 @@ class MicronixMSA400(object):
 		return self.sendCommand('FREQSETMK')
 
 	def measres(self):
-		return self.sendCommand('MEASRES',False,10)
+		return self.sendCommand('MEASRES',False,0.3)
 		
 	def autotune(self):
 		return self.sendCommand('AUTO')
+
+	@property 
+	def preset(self):
+		res = {}
+		for n in PRESET_FIELDS:
+			res[n] = getattr(self,n)
+		return res
+
+	@preset.setter
+	def preset(self,value):
+		assert(isinstance(value,dict))
+		for k in value:
+			if k in PRESET_FIELDS:
+				setattr(self,k,value[k])
+
+	def savepreset(self, filename):
+		assert(isinstance(filename,str))
+		assert(filename is not "")
+		with open(filename,'w') as out:
+			out.write(json.dumps(self.preset))
+
+	def loadfrompreset(self,filename):
+		assert(isinstance(filename,str))
+		assert(filename is not "")
+		with open(filename, 'r') as inp:
+			self.preset = json.loads(inp.read())
 
 	@property
 	def freq(self):
@@ -119,7 +161,7 @@ class MicronixMSA400(object):
 
 	@property
 	def meas(self):
-		return self.sendCommand('MEAS')
+		return self.sendCommand('MEAS?')
 
 	@meas.setter
 	def meas(self, value):
@@ -168,6 +210,7 @@ class MicronixMSA400(object):
 	@property
 	def calc(self):
 		return self.sendCommand('CALC?')
+
 	@calc.setter
 	def calc(self, value):
 		value = str(value).upper()
@@ -299,20 +342,7 @@ class MicronixMSA400(object):
 		freqsinspect	-	подставлять ли в спектр значения частоты или вывести только уровни
 		"""
 		assert(isinstance(freqsinspect, bool))
-		import re
-		def parseFreq(d):
-			p = re.findall('([\d\.]+)(G|M|K|Hz|kHz|MHz|GHz)',d)
-			npart = float(p[0][0])
-			return npart * {
-				'Hz': 1,
-				'kHz': 1000,
-				'K': 1000,
-				'MHz': 1000*1000,
-				'M': 1000*1000,
-				'G': 1000*1000*1000,
-				'GHz': 1000000000
-			}.get(p[0][1])
-		data = self.sendCommand( 'SRSF' , False, sleepTime = 2)
+		data = self.sendCommand( 'SRSF' , False, sleepTime = 1)
 		parts = re.findall('CF\s(\S+)\s+SP\s(\S+)\s+RF\s(\S+)\s+ST\s(\S+)\s(\S+)\s+RB\s(\S+)\s+VB\s(\S+)\s+SC\s(\S+)',data)
 		parts = parts[0]
 		spects = re.findall('(-\d+\.\d+)',data)
